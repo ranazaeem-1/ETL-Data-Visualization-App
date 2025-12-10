@@ -239,5 +239,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <p align="center">
-  Made with ❤️ by <a href="https://github.com/ranazaeem-1">Your Name</a>
+  Made with ❤️ by <a href="https://github.com/ranazaeem-1">Rana Zaeem</a> & <a href="https://github.com/effendii69">Azam Effendi</a>
 </p>
