@@ -18,8 +18,11 @@ import {
     Tooltip,
     ResponsiveContainer,
     Cell,
+    Treemap,
+    ComposedChart,
+    Legend,
 } from 'recharts';
-import { X, Settings, Maximize2 } from 'lucide-react';
+import { X, Settings } from 'lucide-react';
 import { ChartConfig } from '@/lib/store';
 import { aggregateData, prepareHistogramData, prepareScatterData, CHART_COLORS } from '@/lib/vis-engine';
 
@@ -30,30 +33,14 @@ interface ChartCardProps {
     onEdit?: () => void;
 }
 
-const tooltipStyle = {
-    backgroundColor: 'rgba(10, 10, 20, 0.95)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: '12px',
-    color: 'white',
-    boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-    padding: '12px 16px',
-};
-
-const axisTickStyle = { fill: 'rgba(255,255,255,0.5)', fontSize: 11 };
-const chartMargin = { top: 20, right: 20, left: 10, bottom: 60 };
-
-// Gradient colors for charts
-const GRADIENT_COLORS = [
-    { start: '#6366f1', end: '#8b5cf6' },
-    { start: '#ec4899', end: '#f43f5e' },
-    { start: '#06b6d4', end: '#3b82f6' },
-    { start: '#10b981', end: '#22d3ee' },
-    { start: '#f59e0b', end: '#ef4444' },
-];
-
 export function ChartCard({ config, data, onRemove, onEdit }: ChartCardProps) {
     const aggregatedData = useMemo(() => {
-        return aggregateData(data, config.xAxis || '', config.yAxis, config.aggregation);
+        return aggregateData(
+            data,
+            config.xAxis || '',
+            config.yAxis,
+            config.aggregation || 'sum'
+        );
     }, [data, config.xAxis, config.yAxis, config.aggregation]);
 
     const histogramData = useMemo(() => {
@@ -68,31 +55,57 @@ export function ChartCard({ config, data, onRemove, onEdit }: ChartCardProps) {
         ? scatterData.length > 0
         : config.type === 'histogram'
             ? histogramData.length > 0
-            : aggregatedData.length > 0;
+            : config.type === 'dualAxis'
+                ? aggregatedData.length > 0
+                : aggregatedData.length > 0;
 
-    const chartId = `chart-${config.id}`;
+    // Prepare dual-axis data
+    const dualAxisData = useMemo(() => {
+        if (config.type !== 'dualAxis' || !config.yAxis2) return [];
+
+        const y1Data = aggregateData(data, config.xAxis || '', config.yAxis, config.aggregation || 'sum');
+        const y2Map = new Map<string, number>();
+
+        data.forEach((row) => {
+            const key = String(row[config.xAxis || ''] ?? '');
+            const val = row[config.yAxis2 || ''];
+            if (typeof val === 'number') {
+                y2Map.set(key, (y2Map.get(key) || 0) + val);
+            }
+        });
+
+        return y1Data.map((item: { name: string; value: number }) => ({
+            name: item.name,
+            value1: item.value,
+            value2: y2Map.get(item.name) || 0,
+        }));
+    }, [data, config.xAxis, config.yAxis, config.yAxis2, config.aggregation, config.type]);
+
+    const tooltipStyle = {
+        backgroundColor: 'rgb(var(--bg-primary))',
+        border: '1px solid rgb(var(--border-color))',
+        borderRadius: '6px',
+        color: 'rgb(var(--text-primary))',
+    };
+
+    const axisStyle = {
+        fill: 'rgb(var(--text-secondary))',
+        fontSize: 11,
+    };
 
     const renderChart = () => {
         switch (config.type) {
             case 'bar':
                 return (
-                    <ResponsiveContainer width="100%" height={320}>
-                        <BarChart data={aggregatedData} margin={chartMargin}>
-                            <defs>
-                                {aggregatedData.map((_, i) => (
-                                    <linearGradient key={i} id={`barGrad-${chartId}-${i}`} x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor={GRADIENT_COLORS[i % GRADIENT_COLORS.length].start} stopOpacity={1} />
-                                        <stop offset="100%" stopColor={GRADIENT_COLORS[i % GRADIENT_COLORS.length].end} stopOpacity={0.8} />
-                                    </linearGradient>
-                                ))}
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis dataKey="name" tick={axisTickStyle} angle={-45} textAnchor="end" height={80} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                            <YAxis tick={axisTickStyle} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                            <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                                {aggregatedData.map((_, i) => (
-                                    <Cell key={i} fill={`url(#barGrad-${chartId}-${i})`} />
+                    <ResponsiveContainer width="100%" height={280}>
+                        <BarChart data={aggregatedData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border-color))" vertical={false} />
+                            <XAxis dataKey="name" tick={axisStyle} angle={-45} textAnchor="end" height={60} />
+                            <YAxis tick={axisStyle} />
+                            <Tooltip contentStyle={tooltipStyle} />
+                            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                {aggregatedData.map((_: unknown, i: number) => (
+                                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                                 ))}
                             </Bar>
                         </BarChart>
@@ -101,147 +114,101 @@ export function ChartCard({ config, data, onRemove, onEdit }: ChartCardProps) {
 
             case 'line':
                 return (
-                    <ResponsiveContainer width="100%" height={320}>
-                        <LineChart data={aggregatedData} margin={chartMargin}>
-                            <defs>
-                                <linearGradient id={`lineGrad-${chartId}`} x1="0" y1="0" x2="1" y2="0">
-                                    <stop offset="0%" stopColor="#6366f1" />
-                                    <stop offset="50%" stopColor="#8b5cf6" />
-                                    <stop offset="100%" stopColor="#ec4899" />
-                                </linearGradient>
-                                <filter id={`glow-${chartId}`}>
-                                    <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                                    <feMerge>
-                                        <feMergeNode in="coloredBlur" />
-                                        <feMergeNode in="SourceGraphic" />
-                                    </feMerge>
-                                </filter>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis dataKey="name" tick={axisTickStyle} angle={-45} textAnchor="end" height={80} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                            <YAxis tick={axisTickStyle} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
+                    <ResponsiveContainer width="100%" height={280}>
+                        <LineChart data={aggregatedData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border-color))" vertical={false} />
+                            <XAxis dataKey="name" tick={axisStyle} angle={-45} textAnchor="end" height={60} />
+                            <YAxis tick={axisStyle} />
                             <Tooltip contentStyle={tooltipStyle} />
-                            <Line
-                                type="monotone"
-                                dataKey="value"
-                                stroke={`url(#lineGrad-${chartId})`}
-                                strokeWidth={3}
-                                dot={{ fill: '#8b5cf6', strokeWidth: 0, r: 5, filter: `url(#glow-${chartId})` }}
-                                activeDot={{ fill: '#ec4899', strokeWidth: 0, r: 8 }}
-                            />
+                            <Line type="monotone" dataKey="value" stroke={CHART_COLORS[0]} strokeWidth={2} dot={{ fill: CHART_COLORS[0], r: 3 }} />
                         </LineChart>
                     </ResponsiveContainer>
                 );
 
             case 'area':
                 return (
-                    <ResponsiveContainer width="100%" height={320}>
-                        <AreaChart data={aggregatedData} margin={chartMargin}>
-                            <defs>
-                                <linearGradient id={`areaGrad-${chartId}`} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.6} />
-                                    <stop offset="50%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                    <stop offset="100%" stopColor="#ec4899" stopOpacity={0} />
-                                </linearGradient>
-                                <linearGradient id={`areaStroke-${chartId}`} x1="0" y1="0" x2="1" y2="0">
-                                    <stop offset="0%" stopColor="#6366f1" />
-                                    <stop offset="100%" stopColor="#ec4899" />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis dataKey="name" tick={axisTickStyle} angle={-45} textAnchor="end" height={80} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                            <YAxis tick={axisTickStyle} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
+                    <ResponsiveContainer width="100%" height={280}>
+                        <AreaChart data={aggregatedData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border-color))" vertical={false} />
+                            <XAxis dataKey="name" tick={axisStyle} angle={-45} textAnchor="end" height={60} />
+                            <YAxis tick={axisStyle} />
                             <Tooltip contentStyle={tooltipStyle} />
-                            <Area
-                                type="monotone"
-                                dataKey="value"
-                                stroke={`url(#areaStroke-${chartId})`}
-                                strokeWidth={2}
-                                fill={`url(#areaGrad-${chartId})`}
-                            />
+                            <Area type="monotone" dataKey="value" stroke={CHART_COLORS[0]} fill={CHART_COLORS[0]} fillOpacity={0.3} />
                         </AreaChart>
                     </ResponsiveContainer>
                 );
 
             case 'pie':
                 return (
-                    <ResponsiveContainer width="100%" height={320}>
+                    <ResponsiveContainer width="100%" height={280}>
                         <PieChart>
-                            <defs>
-                                {aggregatedData.map((_, i) => (
-                                    <linearGradient key={i} id={`pieGrad-${chartId}-${i}`} x1="0" y1="0" x2="1" y2="1">
-                                        <stop offset="0%" stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity={1} />
-                                        <stop offset="100%" stopColor={CHART_COLORS[(i + 1) % CHART_COLORS.length]} stopOpacity={0.8} />
-                                    </linearGradient>
-                                ))}
-                            </defs>
-                            <Pie
-                                data={aggregatedData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={70}
-                                outerRadius={110}
-                                paddingAngle={3}
-                                dataKey="value"
-                                nameKey="name"
-                                label={({ name, percent }) =>
-                                    `${name || ''} (${((percent || 0) * 100).toFixed(0)}%)`
-                                }
-                                labelLine={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1 }}
-                            >
-                                {aggregatedData.map((_, i) => (
-                                    <Cell
-                                        key={i}
-                                        fill={`url(#pieGrad-${chartId}-${i})`}
-                                        stroke="rgba(0,0,0,0.3)"
-                                        strokeWidth={1}
-                                    />
+                            <Tooltip contentStyle={tooltipStyle} />
+                            <Pie data={aggregatedData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                                {aggregatedData.map((_: unknown, i: number) => (
+                                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                                 ))}
                             </Pie>
-                            <Tooltip contentStyle={tooltipStyle} />
                         </PieChart>
                     </ResponsiveContainer>
                 );
 
             case 'scatter':
                 return (
-                    <ResponsiveContainer width="100%" height={320}>
-                        <ScatterChart margin={chartMargin}>
-                            <defs>
-                                <radialGradient id={`scatterGrad-${chartId}`}>
-                                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} />
-                                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0.6} />
-                                </radialGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                            <XAxis type="number" dataKey="x" name={config.xAxis || ''} tick={axisTickStyle} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                            <YAxis type="number" dataKey="y" name={config.yAxis || ''} tick={axisTickStyle} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                            <Tooltip cursor={{ strokeDasharray: '3 3', stroke: 'rgba(255,255,255,0.2)' }} contentStyle={tooltipStyle} />
-                            <Scatter data={scatterData} fill={`url(#scatterGrad-${chartId})`}>
-                                {scatterData.map((_, i) => (
-                                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                                ))}
-                            </Scatter>
+                    <ResponsiveContainer width="100%" height={280}>
+                        <ScatterChart margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border-color))" />
+                            <XAxis dataKey="x" tick={axisStyle} name={config.xAxis} />
+                            <YAxis dataKey="y" tick={axisStyle} name={config.yAxis} />
+                            <Tooltip contentStyle={tooltipStyle} />
+                            <Scatter data={scatterData} fill={CHART_COLORS[0]} />
                         </ScatterChart>
                     </ResponsiveContainer>
                 );
 
             case 'histogram':
                 return (
-                    <ResponsiveContainer width="100%" height={320}>
-                        <BarChart data={histogramData} margin={chartMargin}>
-                            <defs>
-                                <linearGradient id={`histGrad-${chartId}`} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#6366f1" stopOpacity={1} />
-                                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.6} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                            <XAxis dataKey="name" tick={axisTickStyle} angle={-45} textAnchor="end" height={80} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                            <YAxis tick={axisTickStyle} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} />
-                            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                            <Bar dataKey="value" fill={`url(#histGrad-${chartId})`} radius={[6, 6, 0, 0]} />
+                    <ResponsiveContainer width="100%" height={280}>
+                        <BarChart data={histogramData} margin={{ top: 10, right: 10, left: 0, bottom: 40 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border-color))" vertical={false} />
+                            <XAxis dataKey="name" tick={axisStyle} angle={-45} textAnchor="end" height={60} />
+                            <YAxis tick={axisStyle} />
+                            <Tooltip contentStyle={tooltipStyle} />
+                            <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
                         </BarChart>
+                    </ResponsiveContainer>
+                );
+
+            case 'treemap': {
+                const treemapData = aggregatedData.map((item: { name: string; value: number }, i: number) => ({
+                    name: item.name,
+                    size: item.value,
+                    fill: CHART_COLORS[i % CHART_COLORS.length],
+                }));
+                return (
+                    <ResponsiveContainer width="100%" height={280}>
+                        <Treemap data={treemapData} dataKey="size" aspectRatio={4 / 3} stroke="rgb(var(--border-color))">
+                            <Tooltip contentStyle={tooltipStyle} />
+                            {treemapData.map((entry: { fill: string }, i: number) => (
+                                <Cell key={i} fill={entry.fill} />
+                            ))}
+                        </Treemap>
+                    </ResponsiveContainer>
+                );
+            }
+
+            case 'dualAxis':
+                return (
+                    <ResponsiveContainer width="100%" height={280}>
+                        <ComposedChart data={dualAxisData} margin={{ top: 10, right: 50, left: 0, bottom: 40 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border-color))" vertical={false} />
+                            <XAxis dataKey="name" tick={axisStyle} angle={-45} textAnchor="end" height={60} />
+                            <YAxis yAxisId="left" tick={axisStyle} stroke={CHART_COLORS[0]} />
+                            <YAxis yAxisId="right" orientation="right" tick={axisStyle} stroke={CHART_COLORS[1]} />
+                            <Tooltip contentStyle={tooltipStyle} />
+                            <Legend />
+                            <Bar yAxisId="left" dataKey="value1" name={config.yAxis} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
+                            <Line yAxisId="right" type="monotone" dataKey="value2" name={config.yAxis2} stroke={CHART_COLORS[1]} strokeWidth={2} dot={{ r: 3 }} />
+                        </ComposedChart>
                     </ResponsiveContainer>
                 );
 
@@ -251,40 +218,34 @@ export function ChartCard({ config, data, onRemove, onEdit }: ChartCardProps) {
     };
 
     return (
-        <div className="group relative glass-strong rounded-2xl overflow-hidden card-hover">
-            {/* Glow effect on hover */}
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10" />
-            </div>
-
+        <div className="overflow-hidden">
             {/* Header */}
-            <div className="relative px-5 py-4 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center justify-between p-4 border-b border-[rgb(var(--border-color))]">
                 <div>
-                    <h3 className="font-semibold text-white">{config.title}</h3>
-                    <p className="text-xs text-white/40 mt-0.5">
-                        {config.xAxis}{config.yAxis ? ` × ${config.yAxis}` : ''}
+                    <h3 className="font-medium text-[rgb(var(--text-primary))]">{config.title}</h3>
+                    <p className="text-xs text-[rgb(var(--text-secondary))] mt-0.5">
+                        {config.xAxis}{config.yAxis ? ` vs ${config.yAxis}` : ''}
                     </p>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <button className="p-2 rounded-lg hover:bg-white/10 transition-all hover:scale-110 active:scale-95 opacity-0 group-hover:opacity-100">
-                        <Maximize2 className="w-4 h-4 text-white/50" />
-                    </button>
+                <div className="flex items-center gap-1">
                     {onEdit && (
-                        <button onClick={onEdit} className="p-2 rounded-lg hover:bg-white/10 transition-all hover:scale-110 active:scale-95 opacity-0 group-hover:opacity-100">
-                            <Settings className="w-4 h-4 text-white/50" />
+                        <button onClick={onEdit} className="btn-icon" title="Edit chart">
+                            <Settings className="w-4 h-4" />
                         </button>
                     )}
-                    <button onClick={onRemove} className="p-2 rounded-lg hover:bg-red-500/20 transition-all hover:scale-110 active:scale-95 opacity-0 group-hover:opacity-100">
-                        <X className="w-4 h-4 text-white/50 hover:text-red-400" />
+                    <button onClick={onRemove} className="btn-icon text-[rgb(var(--error))]" title="Remove chart">
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
             {/* Chart */}
-            <div className="relative p-4">
-                {hasData ? renderChart() : (
-                    <div className="h-[320px] flex items-center justify-center text-white/30">
-                        No data available
+            <div className="p-4">
+                {hasData ? (
+                    renderChart()
+                ) : (
+                    <div className="h-64 flex items-center justify-center text-[rgb(var(--text-secondary))]">
+                        No data to display
                     </div>
                 )}
             </div>

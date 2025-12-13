@@ -140,6 +140,129 @@ export function applySmartTransformations(
     return { data: transformedData, newColumns };
 }
 
+// ============================================
+// MISSING VALUE HANDLING
+// ============================================
+
+export type FillStrategy = 'mean' | 'median' | 'mode' | 'custom' | 'drop';
+
+/**
+ * Get the mode (most frequent value) of an array
+ */
+function getMode(values: unknown[]): unknown {
+    const frequency: Record<string, number> = {};
+    let maxFreq = 0;
+    let mode: unknown = null;
+
+    values.forEach((v) => {
+        const key = String(v);
+        frequency[key] = (frequency[key] || 0) + 1;
+        if (frequency[key] > maxFreq) {
+            maxFreq = frequency[key];
+            mode = v;
+        }
+    });
+
+    return mode;
+}
+
+/**
+ * Calculate the mean of numeric values
+ */
+function getMean(values: number[]): number {
+    if (values.length === 0) return 0;
+    return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+/**
+ * Calculate the median of numeric values
+ */
+function getMedian(values: number[]): number {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0
+        ? (sorted[mid - 1] + sorted[mid]) / 2
+        : sorted[mid];
+}
+
+/**
+ * Fill missing values in a column
+ */
+export function fillMissingValues(
+    data: Record<string, unknown>[],
+    columnName: string,
+    strategy: FillStrategy,
+    customValue?: unknown
+): Record<string, unknown>[] {
+    const values = data
+        .map((row) => row[columnName])
+        .filter((v) => v != null && v !== '');
+
+    let fillValue: unknown;
+
+    switch (strategy) {
+        case 'mean': {
+            const numericValues = values.filter((v) => typeof v === 'number') as number[];
+            fillValue = Math.round(getMean(numericValues) * 100) / 100;
+            break;
+        }
+        case 'median': {
+            const numericValues = values.filter((v) => typeof v === 'number') as number[];
+            fillValue = Math.round(getMedian(numericValues) * 100) / 100;
+            break;
+        }
+        case 'mode':
+            fillValue = getMode(values);
+            break;
+        case 'custom':
+            fillValue = customValue;
+            break;
+        case 'drop':
+            // Handled separately
+            return data.filter((row) => row[columnName] != null && row[columnName] !== '');
+    }
+
+    return data.map((row) => {
+        if (row[columnName] == null || row[columnName] === '') {
+            return { ...row, [columnName]: fillValue };
+        }
+        return row;
+    });
+}
+
+/**
+ * Drop rows with any missing values
+ */
+export function dropRowsWithMissing(
+    data: Record<string, unknown>[],
+    columns?: string[]
+): Record<string, unknown>[] {
+    const colsToCheck = columns || (data.length > 0 ? Object.keys(data[0]) : []);
+
+    return data.filter((row) =>
+        colsToCheck.every((col) => row[col] != null && row[col] !== '')
+    );
+}
+
+/**
+ * Get missing value summary for all columns
+ */
+export function getMissingSummary(
+    data: Record<string, unknown>[],
+    columns: string[]
+): { column: string; missing: number; percent: string }[] {
+    return columns.map((col) => {
+        const missing = data.filter((row) => row[col] == null || row[col] === '').length;
+        const percent = ((missing / data.length) * 100).toFixed(1);
+        return { column: col, missing, percent };
+    });
+}
+
+// ============================================
+// EXPORT FUNCTIONS
+// ============================================
+
 /**
  * Export data to CSV string
  */
@@ -156,6 +279,29 @@ export function downloadCSV(data: Record<string, unknown>[], fileName: string): 
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+/**
+ * Download data as Excel file (using simple CSV in xlsx extension)
+ * For full Excel support, would need xlsx library
+ */
+export function downloadExcel(data: Record<string, unknown>[], fileName: string): void {
+    // Create a simple tab-separated format that Excel can read
+    if (data.length === 0) return;
+
+    const headers = Object.keys(data[0]);
+    const rows = [
+        headers.join('\t'),
+        ...data.map((row) => headers.map((h) => String(row[h] ?? '')).join('\t'))
+    ];
+
+    const content = rows.join('\n');
+    const blob = new Blob(['\ufeff' + content], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`;
     link.click();
     URL.revokeObjectURL(link.href);
 }

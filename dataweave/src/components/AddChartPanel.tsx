@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Plus, BarChart3, LineChart, PieChart, ScatterChart, AreaChart } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { ChartConfig } from '@/lib/store';
 
 interface AddChartPanelProps {
@@ -14,6 +14,7 @@ export function AddChartPanel({ columns, onAddChart }: AddChartPanelProps) {
     const [chartType, setChartType] = React.useState<ChartConfig['type']>('bar');
     const [xAxis, setXAxis] = React.useState('');
     const [yAxis, setYAxis] = React.useState('');
+    const [yAxis2, setYAxis2] = React.useState('');
     const [title, setTitle] = React.useState('');
 
     const numericCols = columns.filter((c) => c.type === 'numeric');
@@ -21,7 +22,6 @@ export function AddChartPanel({ columns, onAddChart }: AddChartPanelProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
         if (!xAxis) return;
 
         onAddChart({
@@ -29,139 +29,135 @@ export function AddChartPanel({ columns, onAddChart }: AddChartPanelProps) {
             title: title || `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`,
             xAxis,
             yAxis: yAxis || undefined,
+            yAxis2: chartType === 'dualAxis' ? yAxis2 : undefined,
             aggregation: 'sum',
         });
 
         setIsOpen(false);
         setXAxis('');
         setYAxis('');
+        setYAxis2('');
         setTitle('');
     };
 
-    const chartTypes: { type: ChartConfig['type']; icon: React.ElementType; label: string; gradient: string }[] = [
-        { type: 'bar', icon: BarChart3, label: 'Bar', gradient: 'from-blue-500 to-cyan-500' },
-        { type: 'line', icon: LineChart, label: 'Line', gradient: 'from-purple-500 to-pink-500' },
-        { type: 'area', icon: AreaChart, label: 'Area', gradient: 'from-emerald-500 to-teal-500' },
-        { type: 'pie', icon: PieChart, label: 'Pie', gradient: 'from-amber-500 to-orange-500' },
-        { type: 'scatter', icon: ScatterChart, label: 'Scatter', gradient: 'from-indigo-500 to-purple-500' },
+    const chartTypes: { type: ChartConfig['type']; label: string }[] = [
+        { type: 'bar', label: 'Bar' },
+        { type: 'line', label: 'Line' },
+        { type: 'area', label: 'Area' },
+        { type: 'pie', label: 'Pie' },
+        { type: 'scatter', label: 'Scatter' },
+        { type: 'treemap', label: 'Treemap' },
+        { type: 'dualAxis', label: 'Dual Axis' },
     ];
 
-    return (
-        <div className="relative">
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="group flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-105 active:scale-95 transition-all"
-            >
-                <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+    if (!isOpen) {
+        return (
+            <button onClick={() => setIsOpen(true)} className="btn btn-primary">
+                <Plus className="w-4 h-4" />
                 Add Chart
             </button>
+        );
+    }
 
-            {isOpen && (
-                <>
-                    {/* Backdrop */}
-                    <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setIsOpen(false)}
-                    />
+    return (
+        <div className="modal-overlay animate-fade-in" onClick={() => setIsOpen(false)}>
+            <div className="modal-content w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between p-4 border-b border-[rgb(var(--border-color))]">
+                    <h3 className="font-semibold text-[rgb(var(--text-primary))]">Add Chart</h3>
+                    <button onClick={() => setIsOpen(false)} className="btn-icon">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
 
-                    {/* Panel */}
-                    <div className="absolute right-0 top-full mt-3 w-96 z-50 animate-fade-in">
-                        <div className="glass-strong rounded-2xl p-5 shadow-2xl border border-white/10">
-                            <form onSubmit={handleSubmit} className="space-y-5">
-                                {/* Chart Type Selection */}
-                                <div>
-                                    <label className="block text-sm font-medium text-white/70 mb-3">Chart Type</label>
-                                    <div className="grid grid-cols-5 gap-2">
-                                        {chartTypes.map(({ type, icon: Icon, label, gradient }) => (
-                                            <button
-                                                key={type}
-                                                type="button"
-                                                onClick={() => setChartType(type)}
-                                                className={`
-                          p-3 rounded-xl flex flex-col items-center gap-1.5 transition-all duration-300
-                          ${chartType === type
-                                                        ? `bg-gradient-to-br ${gradient} text-white shadow-lg scale-105`
-                                                        : 'bg-white/[0.03] text-white/50 hover:bg-white/[0.06] hover:text-white/80 border border-white/5'
-                                                    }
-                        `}
-                                            >
-                                                <Icon className="w-5 h-5" />
-                                                <span className="text-[10px] font-medium">{label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Title */}
-                                <div>
-                                    <label className="block text-sm font-medium text-white/70 mb-2">Title</label>
-                                    <input
-                                        type="text"
-                                        value={title}
-                                        onChange={(e) => setTitle(e.target.value)}
-                                        placeholder="Chart title..."
-                                        className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-indigo-500/50 focus:bg-white/[0.05] transition-all"
-                                    />
-                                </div>
-
-                                {/* X-Axis */}
-                                <div>
-                                    <label className="block text-sm font-medium text-white/70 mb-2">X-Axis / Category</label>
-                                    <select
-                                        value={xAxis}
-                                        onChange={(e) => setXAxis(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
-                                    >
-                                        <option value="">Select column...</option>
-                                        {(chartType === 'scatter' ? numericCols : [...categoricalCols, ...numericCols]).map((col) => (
-                                            <option key={col.name} value={col.name}>
-                                                {col.name} ({col.type})
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Y-Axis */}
-                                {chartType !== 'pie' && (
-                                    <div>
-                                        <label className="block text-sm font-medium text-white/70 mb-2">Y-Axis / Value</label>
-                                        <select
-                                            value={yAxis}
-                                            onChange={(e) => setYAxis(e.target.value)}
-                                            className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
-                                        >
-                                            <option value="">Select column...</option>
-                                            {numericCols.map((col) => (
-                                                <option key={col.name} value={col.name}>
-                                                    {col.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-
-                                {/* Buttons */}
-                                <div className="flex gap-3 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsOpen(false)}
-                                        className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06] transition-all font-medium"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={!xAxis}
-                                        className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-indigo-500/25 transition-all"
-                                    >
-                                        Add Chart
-                                    </button>
-                                </div>
-                            </form>
+                <form onSubmit={handleSubmit} className="p-4 space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
+                            Chart Type
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {chartTypes.map((ct) => (
+                                <button
+                                    key={ct.type}
+                                    type="button"
+                                    onClick={() => setChartType(ct.type)}
+                                    className={`px-3 py-2 text-sm rounded-lg border transition-colors ${chartType === ct.type
+                                        ? 'border-[rgb(var(--accent))] bg-[rgba(var(--accent),0.1)] text-[rgb(var(--accent))]'
+                                        : 'border-[rgb(var(--border-color))] text-[rgb(var(--text-secondary))] hover:border-[rgb(var(--accent))]'
+                                        }`}
+                                >
+                                    {ct.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
-                </>
-            )}
+
+                    <div>
+                        <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
+                            Title
+                        </label>
+                        <input
+                            type="text"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder="Chart title..."
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
+                            X-Axis Column
+                        </label>
+                        <select value={xAxis} onChange={(e) => setXAxis(e.target.value)} required>
+                            <option value="">Select column...</option>
+                            <optgroup label="Categorical">
+                                {categoricalCols.map((col) => (
+                                    <option key={col.name} value={col.name}>{col.name}</option>
+                                ))}
+                            </optgroup>
+                            <optgroup label="Numeric">
+                                {numericCols.map((col) => (
+                                    <option key={col.name} value={col.name}>{col.name}</option>
+                                ))}
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
+                            Y-Axis Column {chartType === 'dualAxis' ? '(Left)' : '(optional)'}
+                        </label>
+                        <select value={yAxis} onChange={(e) => setYAxis(e.target.value)} required={chartType === 'dualAxis'}>
+                            <option value="">{chartType === 'dualAxis' ? 'Select column...' : 'Count'}</option>
+                            {numericCols.map((col) => (
+                                <option key={col.name} value={col.name}>{col.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {chartType === 'dualAxis' && (
+                        <div>
+                            <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
+                                Y-Axis Column (Right)
+                            </label>
+                            <select value={yAxis2} onChange={(e) => setYAxis2(e.target.value)} required>
+                                <option value="">Select column...</option>
+                                {numericCols.filter((col) => col.name !== yAxis).map((col) => (
+                                    <option key={col.name} value={col.name}>{col.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    <div className="flex gap-2 pt-2">
+                        <button type="button" onClick={() => setIsOpen(false)} className="btn btn-secondary flex-1">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={!xAxis} className="btn btn-primary flex-1">
+                            Add Chart
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }

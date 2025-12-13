@@ -11,14 +11,12 @@
   <br>
 </h1>
 
-<h4 align="center">A no-code ETL & data visualization platform that transforms your CSV data into stunning visual insights.</h4>
+<h4 align="center">A comprehensive no-code ETL & data visualization platform that transforms your CSV data into stunning visual insights.</h4>
 
 <p align="center">
   <a href="#-features">Features</a> •
-  <a href="#-demo">Demo</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-tech-stack">Tech Stack</a> •
-  <a href="#-project-structure">Project Structure</a> •
   <a href="#-usage">Usage</a> •
   <a href="#-contributing">Contributing</a>
 </p>
@@ -27,37 +25,71 @@
 
 ## ✨ Features
 
-### 🎯 Core Capabilities
+### 📂 Data Import & Management
 
 | Feature | Description |
 |---------|-------------|
-| **📂 Drag & Drop Upload** | Simply drag your CSV file onto the upload zone |
-| **🔍 Smart Type Detection** | Automatically identifies numeric, date, categorical, and text columns |
-| **⚡ Auto Transformations** | Extracts year/month/day from dates, creates bins from numbers |
-| **📊 Instant Visualizations** | Generates charts automatically based on your data types |
-| **🎨 Beautiful Dark Theme** | Premium glassmorphism UI with animated gradients |
-| **📥 Export Options** | Download transformed CSV or screenshot your dashboard |
+| **Drag & Drop Upload** | Simply drag your CSV file onto the upload zone |
+| **Multi-File Support** | Upload multiple files and merge/join them together |
+| **Smart Type Detection** | Automatically identifies numeric, date, categorical columns |
+| **Column Reordering** | Drag & drop to reorder columns in your dataset |
 
-### 🧠 Intelligent Data Processing
+### 🧹 Data Cleaning & Transformation
 
-- **Type Inference**: Automatically detects column data types
-- **Missing Value Detection**: Identifies and reports gaps in your data  
-- **Statistical Analysis**: Calculates min, max, mean, median, and standard deviation
-- **Feature Engineering**:
-  - Date columns → Extracts Year, Month, DayOfWeek
-  - Numeric columns → Creates categorical bins (Low/Medium/High)
+| Feature | Description |
+|---------|-------------|
+| **Missing Value Handler** | Fill with mean/median/mode/custom value or drop rows |
+| **Remove Duplicates** | Identify and remove duplicate rows based on selected columns |
+| **Type Conversion** | Convert columns between number, string, and date types |
+| **Find & Replace** | Search and replace values across any column |
+| **Outlier Removal** | Remove statistical outliers using IQR method |
+| **Calculated Columns** | Create new columns using formulas and expressions |
+| **Advanced Transformations** | Log, sqrt, normalize, one-hot encoding, regex operations |
+| **Group By & Aggregation** | Aggregate data with sum, mean, count, min, max |
 
-### 📈 Auto-Visualization Engine
+### 📊 Data Visualization
 
-DataWeave analyzes your data structure and suggests the optimal chart type:
+| Chart Type | Use Case |
+|------------|----------|
+| **Bar Chart** | Compare categories |
+| **Line Chart** | Show trends over time |
+| **Area Chart** | Display cumulative values |
+| **Pie Chart** | Show proportions |
+| **Scatter Plot** | Explore relationships between numeric columns |
+| **Histogram** | Visualize distributions |
+| **Treemap** | Hierarchical data visualization |
+| **Dual-Axis Chart** | Compare two metrics with different scales |
+| **Geographic Map** | Visualize location-based data with Leaflet |
+| **Correlation Heatmap** | See relationships between numeric columns |
 
-| Data Pattern | Suggested Chart |
-|--------------|-----------------|
-| Date + Numeric | Line Chart / Area Chart |
-| Category + Numeric | Bar Chart |
-| Single Category | Pie Chart / Donut Chart |
-| Two Numeric Columns | Scatter Plot |
-| Numeric Distribution | Histogram |
+### 🧠 Advanced Analytics
+
+| Feature | Description |
+|---------|-------------|
+| **Auto-Insights** | Automatic discovery of patterns and anomalies |
+| **Anomaly Detection** | IQR-based outlier identification |
+| **Trend Analysis** | Detect increasing/decreasing trends |
+| **Correlation Analysis** | Pearson correlation between all numeric columns |
+| **Natural Language Queries** | Query your data using plain English |
+| **PDF Data Profiling Report** | Export comprehensive statistics as PDF |
+
+### 💾 Data Management
+
+| Feature | Description |
+|---------|-------------|
+| **Undo/Redo History** | Revert any transformation with full history |
+| **Dashboard Save/Load** | Persist your chart configurations locally |
+| **CSV Export** | Download transformed data as CSV |
+| **Excel Export** | Export data to XLSX format |
+
+### 🎨 User Interface
+
+| Feature | Description |
+|---------|-------------|
+| **Clean Minimal Design** | Simple, functional interface without distractions |
+| **Light/Dark Theme** | Toggle between light and dark modes |
+| **Organized Sidebar** | All tools accessible from categorized sidebar |
+| **Responsive Layout** | Works on desktop and tablet screens |
 
 ---
 
@@ -119,6 +151,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | **Recharts** | Declarative charting library |
 | **PapaParse** | High-performance CSV parsing |
 | **Lucide React** | Beautiful icon library |
+| **Leaflet / React-Leaflet** | Interactive geographic maps |
+| **jsPDF / jspdf-autotable** | PDF report generation |
+| **@dnd-kit** | Drag and drop functionality |
 | **html2canvas** | Dashboard screenshot export |
 
 ---
@@ -131,14 +166,27 @@ dataweave/
 │   ├── 📂 app/                      # Next.js App Router
 │   │   ├── 📄 layout.tsx            # Root layout with fonts & SEO
 │   │   ├── 📄 page.tsx              # Main application page
-│   │   └── 📄 globals.css           # Global styles & animations
+│   │   └── 📄 globals.css           # Global styles
 │   │
 │   ├── 📂 components/               # React components
 │   │   ├── 📄 FileUploader.tsx      # Drag & drop file upload
-│   │   ├── 📄 DataTable.tsx         # Interactive data table
+│   │   ├── 📄 DataTable.tsx         # Interactive data table with filtering
 │   │   ├── 📄 ChartCard.tsx         # Chart visualization cards
-│   │   ├── 📄 ColumnAnalysisPanel.tsx # Column statistics display
-│   │   └── 📄 AddChartPanel.tsx     # Custom chart builder
+│   │   ├── 📄 AddChartPanel.tsx     # Custom chart builder
+│   │   ├── 📄 ColumnEditor.tsx      # Column management
+│   │   ├── 📄 MissingValuePanel.tsx # Handle missing values
+│   │   ├── 📄 DataCleaningPanel.tsx # Duplicates, type conversion, etc.
+│   │   ├── 📄 CalculatedColumnPanel.tsx # Formula-based columns
+│   │   ├── 📄 TransformationPanel.tsx   # Math/string transformations
+│   │   ├── 📄 InsightsPanel.tsx     # Auto-insights & anomaly detection
+│   │   ├── 📄 CorrelationHeatmap.tsx # Correlation matrix visualization
+│   │   ├── 📄 GeoMap.tsx            # Geographic map visualization
+│   │   ├── 📄 PDFReportPanel.tsx    # PDF data profiling report
+│   │   ├── 📄 ColumnReorderPanel.tsx # Drag-drop column reordering
+│   │   ├── 📄 NLQueryPanel.tsx      # Natural language queries
+│   │   ├── 📄 MultiFilePanel.tsx    # Multi-file upload & merge
+│   │   ├── 📄 DashboardManager.tsx  # Save/load dashboards
+│   │   └── 📄 ThemeToggle.tsx       # Light/dark theme switcher
 │   │
 │   └── 📂 lib/                      # Core logic
 │       ├── 📄 store.ts              # Zustand state management
@@ -156,40 +204,37 @@ dataweave/
 
 ### 1️⃣ Upload Your Data
 
-Drag and drop any CSV file onto the upload zone, or click to browse. DataWeave supports files up to 100MB.
+Drag and drop any CSV file onto the upload zone, or click to browse.
 
-### 2️⃣ Explore Your Data
+### 2️⃣ Clean & Transform
 
-Switch to the **Data** tab to:
-- View your data in an interactive, paginated table
-- Search across all columns
-- Sort by clicking column headers
-- See newly generated columns highlighted in green
-- View column statistics in the side panel
+Use the sidebar tools to:
+- Handle missing values
+- Remove duplicates
+- Convert data types
+- Create calculated columns
+- Apply transformations (log, normalize, etc.)
 
-### 3️⃣ Visualize with Dashboard
+### 3️⃣ Explore & Analyze
+
+- View data in the interactive table with sorting and filtering
+- Use **Auto Insights** to discover patterns and anomalies
+- Ask questions using **Natural Language** queries
+- See correlations with the **Correlation Heatmap**
+
+### 4️⃣ Visualize
 
 Switch to the **Dashboard** tab to:
-- See auto-generated charts based on your data
-- Add custom charts using the "Add Chart" button
-- Remove charts by hovering and clicking the X
-- Choose from Bar, Line, Area, Pie, Scatter, and Histogram types
+- View auto-generated charts
+- Add custom charts (Bar, Line, Pie, Scatter, Treemap, Dual-Axis)
+- Create geographic maps for location data
+- Save and load dashboard configurations
 
-### 4️⃣ Export Your Work
+### 5️⃣ Export
 
-- **CSV Export**: Download your transformed data with new columns
-- **Screenshot**: Capture your dashboard (or use browser screenshot tools)
-
----
-
-## 🎨 UI Features
-
-- 🌌 **Animated Mesh Gradient** background
-- 💎 **Glassmorphism** cards and panels
-- ✨ **Glow Effects** on interactive elements
-- 🎭 **Smooth Animations** with staggered reveals
-- 📊 **Gradient-filled Charts** with custom color palettes
-- 🌙 **Dark Theme First** design philosophy
+- **CSV/Excel Export**: Download transformed data
+- **PDF Report**: Generate comprehensive data profiling report
+- **Save Dashboard**: Persist chart configurations for later
 
 ---
 
@@ -231,10 +276,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- [Recharts](https://recharts.org/) for the amazing charting library
+- [Recharts](https://recharts.org/) for the charting library
+- [Leaflet](https://leafletjs.com/) for map functionality
 - [Tailwind CSS](https://tailwindcss.com/) for utility-first styling
 - [Lucide](https://lucide.dev/) for beautiful icons
-- [PapaParse](https://www.papaparse.com/) for robust CSV parsing
+- [PapaParse](https://www.papaparse.com/) for CSV parsing
+- [jsPDF](https://github.com/parallax/jsPDF) for PDF generation
+- [dnd-kit](https://dndkit.com/) for drag and drop
 
 ---
 
